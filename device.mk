@@ -50,7 +50,7 @@ TARGET_SCREEN_HEIGHT := 1920
 TARGET_SCREEN_WIDTH := 1080
 
 # Boot control HAL
-PRODUCT_PACKAGES += \ 
+PRODUCT_PACKAGES += \
     android.hardware.boot@1.0-impl \
     android.hardware.boot@1.0-service \
     bootctrl.qcom
