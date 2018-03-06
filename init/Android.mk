@@ -22,9 +22,9 @@ LOCAL_C_INCLUDES := \
     system/core/base/include \
     system/core/init \
     external/selinux/libselinux/include
-LOCAL_MODULE := libinit_mido
+LOCAL_MODULE := libinit_tissot
 LOCAL_MODULE_TAGS := optional
-LOCAL_SRC_FILES := init_mido.cpp
+LOCAL_SRC_FILES := init_tissot.cpp
 LOCAL_STATIC_LIBRARIES := libbase
 
 include $(BUILD_STATIC_LIBRARY)
