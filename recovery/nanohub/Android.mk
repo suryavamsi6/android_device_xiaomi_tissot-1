@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2017 The LineageOS Project
+# Copyright 2016 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +14,17 @@
 # limitations under the License.
 #
 
-# Inherit from those products. Most specific first.
-$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
-$(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
+ifeq ($(TARGET_RECOVERY_UI_LIB),librecovery_ui_nanohub)
+LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
 
-# Inherit from mido device
-$(call inherit-product, device/xiaomi/tissot/device.mk)
+LOCAL_MODULE := librecovery_ui_nanohub
 
-# Device identifier. This must come after all inclusions
-TARGET_VENDOR := Xiaomi
-PRODUCT_DEVICE := tissot
-PRODUCT_NAME := full_tissot
-PRODUCT_BRAND := Xiaomi
-PRODUCT_MODEL := Mi A1
-PRODUCT_MANUFACTURER := Xiaomi
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_C_INCLUDES += bootable/recovery
+
+LOCAL_SRC_FILES := nanohub_recovery_ui.cpp
+
+include $(BUILD_STATIC_LIBRARY)
+endif
