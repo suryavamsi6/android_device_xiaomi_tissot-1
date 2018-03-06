@@ -150,7 +150,6 @@ OVERRIDE_RS_DRIVER := libRSDriver_adreno.so
 USE_OPENGL_RENDERER := true
 
 # Filesystem
-BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 TARGET_USERIMAGES_USE_EXT4 := true
 TARGET_USERIMAGES_USE_F2FS := true
 
@@ -229,7 +228,7 @@ include device/qcom/sepolicy/sepolicy.mk
 BOARD_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy
 
 # Shims
-TARGET_LD_SHIM_LIBS := /system/lib/libYuvSkia.so|libshims_skia.so
+TARGET_LD_SHIM_LIBS := /system/lib/libskia.so|libshims_skia.so
 
 # Wi-Fi
 BOARD_HAS_QCOM_WLAN := true

@@ -18,7 +18,7 @@
 
 set -e
 
-DEVICE=mido
+DEVICE=tissot
 VENDOR=xiaomi
 
 INITIAL_COPYRIGHT_YEAR=2017
