@@ -124,11 +124,13 @@ PRODUCT_PACKAGES += \
     camera.msm8953 \
     libmm-qcamera \
     libshims_skia \
+    MiuiCamera \
     Snap
 
 PRODUCT_PACKAGES += \
     camera.device@1.0-impl \
     camera.device@3.2-impl \
+    camera.device@3.3-impl \
     android.hardware.camera.provider@2.4-impl \
     vendor.qti.hardware.camera.device@1.0 \
     vendor.qti.hardware.camera.device@1.0_vendor
@@ -290,6 +292,10 @@ PRODUCT_PACKAGES += \
 # QMI
 PRODUCT_PACKAGES += \
     libjson
+
+# Prebuilt
+PRODUCT_COPY_FILES += \
+    $(call find-copy-subdir-files,*,device/xiaomi/tissot/prebuilt/system,system)
 
 # Ramdisk
 PRODUCT_PACKAGES += \
