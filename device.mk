@@ -25,9 +25,44 @@ DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
 PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xxhdpi
 
+# A/B updater
+AB_OTA_UPDATER := true
+
+AB_OTA_PARTITIONS += \
+    boot \
+    system
+
+AB_OTA_POSTINSTALL_CONFIG += \
+    RUN_POSTINSTALL_system=true \
+    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
+    FILESYSTEM_TYPE_system=ext4 \
+    POSTINSTALL_OPTIONAL_system=true
+
+PRODUCT_PACKAGES += \
+    otapreopt_script \
+    brillo_update_payload \
+    update_engine \
+    update_engine_sideload \
+    update_verifier
+
 # Boot animation
 TARGET_SCREEN_HEIGHT := 1920
 TARGET_SCREEN_WIDTH := 1080
+
+# Boot control HAL
+PRODUCT_PACKAGES += \ 
+    android.hardware.boot@1.0-impl \
+    android.hardware.boot@1.0-service \
+    bootctrl.qcom
+
+PRODUCT_PACKAGES_DEBUG += \
+    bootctl \
+    update_engine_client
+
+PRODUCT_STATIC_BOOT_CONTROL_HAL := \
+    bootctrl.qcom \
+    libgptutils \
+    libz
 
 # Permissions
 PRODUCT_COPY_FILES += \
@@ -113,11 +148,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     libbt-vendor \
     android.hardware.bluetooth@1.0-impl
-
-# Boot control HAL
-PRODUCT_PACKAGES += \
-    android.hardware.boot@1.0-impl \
-    android.hardware.boot@1.0-service
 
 # Camera
 PRODUCT_PACKAGES += \
