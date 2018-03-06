@@ -203,6 +203,7 @@ TARGET_NO_RECOVERY := true
 TARGET_PER_MGR_ENABLED := true
 
 # Power
+TARGET_HAS_NO_WIFI_STATS := true 
 TARGET_POWERHAL_VARIANT := qcom
 
 # Properties
