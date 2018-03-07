@@ -53,14 +53,14 @@ TARGET_SCREEN_WIDTH := 1080
 PRODUCT_PACKAGES += \
     android.hardware.boot@1.0-impl \
     android.hardware.boot@1.0-service \
-    bootctrl.qcom
+    bootctrl.msm8953
 
 PRODUCT_PACKAGES_DEBUG += \
     bootctl \
     update_engine_client
 
 PRODUCT_STATIC_BOOT_CONTROL_HAL := \
-    bootctrl.qcom \
+    bootctrl.msm8953 \
     libgptutils \
     libz
 
