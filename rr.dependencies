@@ -13,5 +13,10 @@
     "repository" : "Tissot-Development/android_vendor_xiaomi_tissot",
     "target_path": "vendor/xiaomi/tissot",
     "branch"     : "8.1"
+  },
+    "repository": "ghpranav/prebuilts_clang_host_linux-x86_7.0-DragonTC",
+    "target_path": "prebuilts/clang/host/linux-x86/7.0-DragonTC",
+    "branch": "master",
+    "remote": "github"
   }
 ]
