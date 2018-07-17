@@ -1,0 +1,468 @@
+# set default colourspace
+ini_set("force_colorspace","rgba");
+
+# set theme and font
+theme("miui");
+fontresload( "0", "ttf/Roboto-Regular.ttf", "12" );
+fontresload( "1", "ttf/Roboto-Regular.ttf", "14" );
+
+# custom UI prompts
+if file_getprop("/tmp/aroma_prompt.prop", "task") == "flash_slot_prompt" then
+	ini_set("text_next", "OK");
+	setvar("id", file_getprop("/tmp/aroma_prompt.prop", "id"));
+	setvar("slot", file_getprop("/tmp/aroma_prompt.prop", "slot"));
+	form(
+		"Confirm ZIP install",
+		"You are about to install a ROM into boot Slot " + getvar("slot") + ". To change install slot, you must reboot recovery with the <i>other</i> slot active.",
+		"@chip",
+		"aroma_prompt_result.prop",
+		"confirm",	"Confirm",					"Confirm flashing to Slot " + getvar("slot") + ". This will erase existing ROM: '" +
+													"<b>" + getvar("id") + "</b>'.",												"select.selected",
+		"cancel",	"Cancel",					"Cancel installation and return to TWRP.",											"select",
+		"survival",	"TWRP/RAMDisk survival",	"Perform TWRP/RAMDisk survival if possible. For advanced users: uncheck this " + 
+													"to use the 100% original boot image in the payload.",							"check.checked"
+	);
+	if prop("aroma_prompt_result.prop","root") == "confirm" then
+		write("/tmp/flash_confirm", "");
+	endif;
+	if prop("aroma_prompt_result.prop","survival") != "1" then
+		write("/tmp/flash_skip_survival", "");
+	endif;
+	exit("");
+endif;
+
+# set device from ro.product.device prop, abort if not possible
+setvar("device", sysprop("ro.product.device"));
+if (!getvar("device") == "tissot" ) then
+    # something wrong with this device/recovery
+    ini_set("text_next", "Exit");
+    ini_set("icon_next", "");
+    textbox(
+        "Error",
+        "Wrong device",
+        "@warning",
+        "This is only for tissot (Mi A1) devices."
+    );
+    exit("");
+endif;
+
+# Abort on hotboot
+setvar("isHotBoot", exec("/sbin/sh", "/tissot_manager/tools.sh", "isHotBoot"));
+if getvar("isHotBoot")==0 then
+	ini_set("text_next", "Exit");
+    ini_set("icon_next", "");
+    textbox(
+        "Error",
+        "Unavailable on Hotboot",
+        "@warning",
+        "Tissot Manager cannot function correctly in hotboot mode. Please flash it via the installer ZIP to use."
+    );
+    exit("");
+endif;
+
+# extract common files
+ziptotmp("version.prop", "version.prop");
+ziptotmp("changelog.txt", "changelog.txt");
+ziptotmp("disclaimer.txt", "disclaimer.txt");
+ziptotmp("credits.txt", "credits.txt");
+
+# set common variables
+ini_set("rom_name",             file_getprop("/tmp/aroma/version.prop","name"));
+#ini_set("rom_version",          file_getprop("/tmp/aroma/version.prop","version"));
+ini_set("rom_author",           "CosmicDan (see Credits for more)");
+ini_set("rom_device",           getvar("device"));
+
+# show disclaimer
+agreebox(
+    "Disclaimer",
+    "Please read and acknowledge the following information",
+    "@warning",
+    read("/tmp/aroma/disclaimer.txt"),
+    "I understand and have made a Recovery backup",
+    "You must acknowledge the disclaimer to use " + ini_get("rom_name") + "!"
+);
+
+
+
+###################
+### Main menu
+###################
+
+gotolabel("start");
+ini_set("text_next", "Next");
+ini_set("icon_next", "@next");
+
+# gather information about existing partition map
+# Not necessary, happens in a split second
+#pleasewait("Reading your partition table...");
+setvar("partition_status", exec("/sbin/sh", "/tissot_manager/get_partition_status.sh"));
+setvar("partition_status_text", "Unrecognized");
+setvar("repartition_subtext", "Repartition unavailable - unrecognized partition layout");
+if (getvar("partition_status") == 1) then
+	setvar("partition_status_text", "Stock");
+	setvar("repartition_subtext", "Repartition device for Treble capability");
+endif;
+if (getvar("partition_status") == 2) then
+	setvar("partition_status_text", "Treble (Shrunk System)");
+	setvar("repartition_subtext", "Restore stock partition map");
+endif;
+if (getvar("partition_status") == 3) then
+	setvar("partition_status_text", "Treble (Shrunk Userdata)");
+	setvar("repartition_subtext", "Restore stock partition map");
+endif;
+if (getvar("partition_status") == 4) then
+	setvar("partition_status_text", "Treble (Shrunk/Split Userdata)");
+	setvar("repartition_subtext", "Restore stock partition map");
+endif;
+
+menubox(
+    "Welcome to " + ini_get("rom_name") + "!",
+    "Detected Device: <b>" + getvar("device") + "</b>\n" +
+	"Detected partition map: " + getvar("partition_status_text"),
+    "@home",
+    "choice_main_menu.prop",
+    "Repartition",				getvar("repartition_subtext"),						"@chip",
+	"Patches",					"Various device patches",							"@patches",
+    "Changelog",				"View changelog for this version",					"@changelog",
+	"Credits",					"See thanks and credits",							"@credits",
+    "Exit",						"Exit and return to Recovery",						"@exit"
+);
+
+
+
+###################
+### Repartition
+###################
+
+if prop("choice_main_menu.prop", "selected") == "1" then
+	# invalid partition map
+	if (getvar("partition_status") == 0) then
+		alert(
+			"Unable to repartition",
+			"Your partition map is unrecognized. Please contact CosmicDan for help.",
+			"@warning"
+		);
+		goto("start");
+	endif;
+
+	# Stock partition
+	if (getvar("partition_status") == 1) then
+		form(
+			"Repartition for Treble",
+			"A normal partition must be shrunk to add new Treble Vendor partitions. Both choices are 100% compatible with Treble ROMs.",
+			"@chip",
+			"choice_repartition.prop",
+			"treble_userdata",		"Shrink Userdata",			"Shrink Userdata by 1.2GB. Maintains compatibility with non-Treble ROMs. " +
+																"<#c00>This will wipe Userdata and Internal Storage!</#>",										"select.selected",
+			"treble_system",    	"Shrink System(s)",			"Shrink each System by 600MB. " + 
+																"<#c00>You will be unable to flash any non-Treble ROM! Also wipes existing System slots.</#>",	"select"
+		);
+		
+		if prop("choice_repartition.prop","root") == "treble_userdata" then
+			pleasewait("Calculating dual boot options...");
+			# gather size variables. We need to use exec_buffer on these calls for some reason.
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "userdata_calc", "4gb");
+			setvar("userdata_remaining_4gb", file_getprop("/tmp/result.prop", "result"));
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "userdata_calc", "6gb");
+			setvar("userdata_remaining_6gb", file_getprop("/tmp/result.prop", "result"));
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "userdata_calc", "8gb");
+			setvar("userdata_remaining_8gb", file_getprop("/tmp/result.prop", "result"));
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "userdata_calc", "12gb");
+			setvar("userdata_remaining_12gb", file_getprop("/tmp/result.prop", "result"));
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "userdata_calc", "16gb");
+			setvar("userdata_remaining_16gb", file_getprop("/tmp/result.prop", "result"));
+			
+			form(
+				"Dual boot",
+				"DEVELOPERS ONLY. See TWRP thread for known issues with Dual-boot.",
+				"@chip",
+				"choice_dualboot.prop",
+				"none",		"Singleboot",							"Keep single-boot. Recommended for daily drivers.",									"select.selected",
+				"4gb",   	"Dual boot, 4GB for Slot B",			"Dual boot with 4GB for userdata_b. For your device, this leaves about " +
+																		getvar("userdata_remaining_4gb") + "GB for userdata_a.",						"select",
+				"6gb",   	"Dual boot, 6GB for Slot B",			"Dual boot with 6GB for userdata_b. For your device, this leaves about " +
+																		getvar("userdata_remaining_6gb") + "GB for userdata_a.",						"select",
+				"8gb",   	"Dual boot, 8GB for Slot B",			"Dual boot with 8GB for userdata_b. For your device, this leaves about " +
+																		getvar("userdata_remaining_8gb") + "GB for userdata_a.",						"select",
+				"12gb",   	"Dual boot, 12GB for Slot B",			"Dual boot with 12GB for userdata_b. For your device, this leaves about " +
+																		getvar("userdata_remaining_12gb") + "GB for userdata_a.",						"select",
+				"16gb",   	"Dual boot, 16GB for Slot B",			"Dual boot with 16GB for userdata_b. For your device, this leaves about " +
+																		getvar("userdata_remaining_16gb") + "GB for userdata_a.",						"select"
+			);
+		endif;
+		
+		setvar("partition_subtitle", "You are about to repartition for Treble support.");
+		setvar("partition_secondline", "");
+		
+		if prop("choice_repartition.prop","root") == "treble_userdata" then
+			setvar("partition_firstline", "This will shrink Userdata by 1.2GB, adding vendor partitions (one for each slot) and allow flashing a Treble ROM.");
+			if prop("choice_dualboot.prop","root") == "none" then
+				setvar("partition_secondline", "You have opted for no dual boot.");
+			else
+				setvar("partition_secondline", "You have opted for dual boot option '" + prop("choice_dualboot.prop","root") + "' to split userdata between both slots.");
+			endif;
+			setvar("partition_wipe_label", "your USERDATA, including INTERNAL STORAGE, so make sure you have backed up anything you want to keep!");
+		else
+			setvar("partition_firstline", "This will shrink each system slot by 600MB, adding vendor partitions (one for each slot) and allow flashing a Treble ROM.\n\n" +
+											"Note that you will <b>NOT</b> be able to flash non-Treble ROM's while in this partition state.");
+			setvar("partition_wipe_label", "both SYSTEM slots, requiring you to install a new ROM or restore from a TWRP backup!");
+		endif;
+	else
+		writetmpfile("choice_repartition.prop", "root=stock");
+		setvar("partition_subtitle", "You are about to restore stock partitions.");
+		setvar("partition_firstline", "This will remove Treble support from your device, restoring stock partitions and reclaiming the space.");
+		setvar("partition_wipe_label", "your USERDATA, including INTERNAL STORAGE, so make sure you have backed up anything you want to keep!");
+		if (getvar("partition_status") == 2) then
+			setvar("partition_wipe_label", "both SYSTEM slots, requiring you to install a new ROM or restore from a TWRP backup!");
+		endif;
+		if (getvar("partition_status") == 4) then
+			setvar("partition_wipe_label", "your USERDATA for BOTH SLOTS, including INTERNAL STORAGE, so make sure you have backed up anything you want to keep!");
+		endif;
+	endif;
+	
+	
+	
+	ini_set("text_next", "Repartition");
+	ini_set("icon_next", "@undo");
+	
+	agreebox(
+		"Repartition for Treble",
+		getvar("partition_subtitle"),
+		"@warning",
+		"\n\n" + getvar("partition_firstline") + "\n\n" + 
+		getvar("partition_secondline") + "\n\n" + 
+		"<#c00><b>This will COMPLETELY WIPE " + getvar("partition_wipe_label") + "</b></#>\n\n\n" +
+		"Please check the box below to confirm.",
+		"I wish to repartition this device",
+		"Check the box to confirm!"
+	);
+	
+	
+	# debug
+	#goto("start");
+endif;
+
+
+
+###################
+### Patches
+###################
+
+if prop("choice_main_menu.prop","selected")=="2" then
+	gotolabel("patches");
+	pleasewait("Detecting existing patch status...");
+	
+	# dualboot status and text
+	exec("/sbin/sh", "/tissot_manager/tools.sh", "doDualbootCheck");
+	setvar("doDualbootCheck", file_getprop("/tmp/result.prop", "result"));
+	setvar("dualboot_subtext", "Current slot is empty or incompatible, cannot patch.");
+	if getvar("doDualbootCheck")=="singleboot" then
+		setvar("dualboot_subtext", "Current slot is <#c00>single boot</#>. Tap to patch for <#00c>dual boot</#>.");
+	endif;
+	if getvar("doDualbootCheck")=="dualboot" then
+		setvar("dualboot_subtext", "Current slot is <#00c>dual boot</#>. Tap to revert to <#c00>single boot</#> only.");
+	endif;
+	
+	# encryption status and text
+	exec("/sbin/sh", "/tissot_manager/tools.sh", "doEncryptionCheck");
+	setvar("doEncryptionCheck", file_getprop("/tmp/result.prop", "result"));
+	setvar("encryption_subtext", "Current slot encryption status is unknown or invalid, cannot patch.");
+	if getvar("doEncryptionCheck")=="forced" then
+		setvar("encryption_subtext", "Current slot has <#0c0>forced</#> encryption. Tap to patch for <#00c>optional</#> encryption. YOU WILL NEED TO FORMAT DATA.");
+	endif;
+	if getvar("doEncryptionCheck")=="optional" then
+		setvar("encryption_subtext", "Current slot has <#00c>optional</#> encryption. Tap to change to <#0c0>forced</#> encryption. MAY CAUSE BOOTLOOP.");
+	endif;
+	
+	# get boot slot letter
+	exec("/sbin/sh", "/tissot_manager/tools.sh", "getBootSlotLetter");
+	setvar("bootSlotLetter", getvar("exec_buffer"));
+	
+	# selinux status and text
+	exec("/sbin/sh", "/tissot_manager/tools.sh", "doSelinuxCheck");
+	setvar("doSelinuxCheck", file_getprop("/tmp/result.prop", "result"));
+	setvar("selinux_subtext", "Boot slot <b>" + getvar("bootSlotLetter") + "</b> SELinux mode is unknown, probably <#00c>enforcing</#>. Tap to attempt <#c00>permissive</#> mode.");
+	setvar("doSelinuxPatch", "permissive");
+	if getvar("doSelinuxCheck")=="permissive" then
+		setvar("selinux_subtext", "Boot slot <b>" + getvar("bootSlotLetter") + "</b> has <#c00>permissive</#> mode SELinux. Tap to patch kernel for <#00c>enforcing</#> mode.");
+		setvar("doSelinuxPatch", "enforcing");
+	endif;
+	if getvar("doSelinuxCheck")=="enforcing" then
+		setvar("selinux_subtext", "Boot slot <b>" + getvar("bootSlotLetter") + "</b> has <#00c>enforcing</#> mode SELinux. Tap to patch kernel for <#c00>permissive</#> mode.");
+	endif;
+	
+	# done building info, show menu
+	menubox(
+		"Patches",
+		"Select your choice.",
+		"@patches",
+		"choice_patches.prop",
+		"Dual boot patch",			getvar("dualboot_subtext"),										"@dualboot",
+		"Userdata Encryption",		getvar("encryption_subtext"),									"@chip",
+		"SELinux Mode",				getvar("selinux_subtext"),										"@lock",
+		"God-mode ADBD on Boot",	"Patch for root/insecure ADBD on boot", 						"@adb",
+		"Back",						"Return to main menu",											"@home"
+	);
+	
+	if prop("choice_patches.prop","selected")=="1" then
+		if getvar("doDualbootCheck")=="na" then
+			# unrecognized or empty ROM/Vendor partition map
+			alert(
+				"Unable to patch",
+				"Your ROM/Vendor is empty or incompatible with dual boot as it does not have a standard fstab. Please report this to your ROM developer.",
+				"@warning"
+			);
+		else
+			# run patch
+			pleasewait("Patching...");
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "doDualbootPatch");
+		endif;
+		goto("patches");
+	endif;
+	
+	if prop("choice_patches.prop","selected")=="2" then
+		if getvar("doEncryptionCheck")=="unknown" then
+			# unrecognized encryption state
+			alert(
+				"Unable to patch",
+				"Your ROM/Vendor has an unknown userdata encryption flag. It cannot be changed as it probably doesn't support encryption at all.",
+				"@warning"
+			);
+		else
+			# run patch
+			pleasewait("Patching...");
+			exec("/sbin/sh", "/tissot_manager/tools.sh", "doEncryptionPatch");
+		endif;
+		goto("patches");
+	endif;
+	
+	if prop("choice_patches.prop","selected")=="3" then
+		agreebox(
+			"SELinux Mode",
+			"Patch boot slot <b>" + getvar("bootSlotLetter") + "</b> kernel for " + getvar("doSelinuxPatch") + " SELinux",
+			"@lock",
+			"This process will modify the kernel (boot.img) in the boot slot <b>" + getvar("bootSlotLetter") + "</b> for <b>" + getvar("doSelinuxPatch") + "</b> mode SELinux. This will permenently modify the boot.img. It can be reversed however by running this patch again.\n\n" +
+			"If you wish to patch the other slot, return to TWRP, change the Slot, and Reboot Recovery to load the other slot kernel.\n\n" +
+			"Note that this will have no effect on user ROM builds (e.g. stock ROM/kernel).\n\n" +
+			"<#c00><b>This is for advanced users and developers only. Enabling enforcing on a permissive ROM will likely result in errors and bootloop. Enabling permissive on an enforcing ROM will reduce device security.</b></#>\n\n\n" +
+			"Please check the box below to confirm, or Back to return.",
+			"I wish to patch slot <b>" + getvar("bootSlotLetter") + "</b> kernel to SELinux " + getvar("doSelinuxPatch"),
+			"Check the box to confirm!"
+		);
+		
+		# flag for installer.sh
+		write("/tmp/doselinux", "");
+		
+		ini_set("text_next", "Reboot TWRP");
+		ini_set("icon_next", "@exit");
+		setvar("retstatus",
+			install(
+				"Installing",
+				"<b>"+ini_get("rom_name")+"</b> is patching for SELinux " + getvar("doSelinuxPatch") + ".\n\n"+
+				"This may take a moment.",
+				"@lock",
+				"Done! Your device will now reboot TWRP to load the modified kernel."
+			)
+		);
+		# We need to reboot after modifying kernel cmdline
+		write("/tmp/do_reboot_recovery", "");
+		exit("");
+	endif;
+	
+	if prop("choice_patches.prop","selected")=="4" then
+		agreebox(
+			"God-mode ADBD on Boot",
+			"Patch for god-mode ADBD on boot",
+			"@adb",
+			"This process will modify build properties for ADBD on boot in insecure mode and add a god-mode adbd binary. This provides ADB access on boot without authentication, as root. Note that the root mode may not function on some ROMs.\n\n" + 
+			"<#c00><b>These changes will break verity - so make sure you are using Magisk or a modded kernel. Also note that this may break Safetynet. It is intended for development purposes and greatly exposes your device to security risks.</b></#>\n\n\n" +
+			"<#c00><b>This process cannot be undone. Be sure you are aware of the implications and can restore from a /system backup if you wish to revert.</b></#>\n\n\n" +
+			"Please check the box below to confirm, or Back to return.",
+			"I wish to make my device god-mode ADBD",
+			"Check the box to confirm!"
+		);
+		
+		# flag for installer.sh
+		write("/tmp/doadb", "");
+
+		ini_set("text_next", "Return");
+		ini_set("icon_next", "@home");
+		setvar("retstatus",
+			install(
+				"Installing",
+				"<b>"+ini_get("rom_name")+"</b> is patching for ADBD.\n\n"+
+				"This may take a moment.",
+				"@adb",
+				"Done!"
+			)
+		);
+	endif;
+	
+	goto("start");
+endif;
+
+
+
+###################
+### Changelog and Credits
+###################
+
+if prop("choice_main_menu.prop","selected")=="3" then
+    ini_set("text_next", "Return  ");
+    ini_set("icon_next", "@home");
+    textbox(
+        "Changelog",
+        "Changelog up to this version",
+        "@changelog",
+        read("/tmp/aroma/changelog.txt")
+    );
+    goto("start");
+endif;
+
+if prop("choice_main_menu.prop","selected")=="4" then
+    ini_set("text_next", "Return  ");
+    ini_set("icon_next", "@home");
+    textbox(
+        "Credits",
+        "Thanks and credits for Tissot Manager",
+        "@credits",
+        read("/tmp/aroma/credits.txt")
+    );
+    goto("start");
+endif;
+
+
+
+###################
+### Exit
+###################
+
+if prop("choice_main_menu.prop","selected")=="5" then
+    exit("");
+endif;
+
+
+
+###################
+### Installation
+###################
+
+if prop("choice_main_menu.prop", "selected") == "1" then
+	# cache the partition status value for install process
+	write("/tmp/partition_status", getvar("partition_status"));
+
+	ini_set("text_next", "Reboot TWRP");
+	ini_set("icon_next", "@exit");
+	setvar("retstatus",
+		install(
+			"Repartitioning",
+			"<b>"+ini_get("rom_name")+"</b> is performing the repartition.\n\n"+
+			"This may take a minute.",
+			"@chip",
+			""
+		)
+	);
+	write("/tmp/do_reboot_recovery", "");
+endif;
+
+exit("");

@@ -34,6 +34,11 @@ $(DSP_SYMLINK): $(LOCAL_INSTALLED_MODULE)
 	@mkdir -p $(TARGET_OUT_VENDOR)/lib/dsp
 	$(hide) ln -sf /vendor/lib/dsp $@
 
+# Build Tissot Manager stuff for TWRP recovery ramdisk
+ifeq ($(WITH_TWRP),true)
+BOARD_RECOVERY_IMAGE_PREPARE := $(DEVICE_PATH)/recovery/recovery_inject.sh "$(TARGET_RECOVERY_ROOT_OUT)"
+endif
+
 ALL_DEFAULT_INSTALLED_MODULES += $(DSP_SYMLINK)
 
 LOCAL_MODULE := wifi_symlinks

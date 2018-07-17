@@ -218,7 +218,11 @@ BOARD_USES_QCOM_HARDWARE := true
 TARGET_USE_SDCLANG := true
 
 # Recovery
+ifeq ($(WITH_TWRP),true)
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/twrp/root/etc/recovery.fstab
+else
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/fstab.qcom
+endif
 
 # RIL
 TARGET_RIL_VARIANT := caf
@@ -234,6 +238,35 @@ BOARD_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy
 BOARD_PROPERTY_OVERRIDES_SPLIT_ENABLED := true
 PRODUCT_FULL_TREBLE_OVERRIDE := true
 PRODUCT_COMPATIBILITY_MATRIX_LEVEL_OVERRIDE := 27
+
+ifeq ($(WITH_TWRP),true)
+# TWRP
+# Source - https://forum.xda-developers.com/android/software/twrp-flags-boardconfig-mk-t3333970
+TARGET_RECOVERY_DEVICE_DIRS += $(DEVICE_PATH)/twrp
+RECOVERY_VARIANT := twrp
+TW_THEME := portrait_hdpi
+RECOVERY_SDCARD_ON_DATA := true
+TW_EXCLUDE_SUPERSU := true
+TW_HAS_NO_RECOVERY_PARTITION := true
+TW_INCLUDE_INJECTTWRP := false
+TW_INCLUDE_CRYPTO := true
+TW_BRIGHTNESS_PATH := "/sys/class/leds/lcd-backlight/brightness"
+TW_MAX_BRIGHTNESS := 255
+TW_DEFAULT_BRIGHTNESS := 150
+TARGET_RECOVERY_QCOM_RTC_FIX := true
+# TWRP extra by CosmicDan
+TARGET_RECOVERY_DEVICE_MODULES += android.hardware.boot@1.0
+TW_RECOVERY_ADDITIONAL_RELINK_FILES := $(OUT)/system/lib64/android.hardware.boot@1.0.so
+TWRP_INCLUDE_LOGCAT := true
+TARGET_USES_LOGD := true
+TW_INCLUDE_FB2PNG := true
+# TWRP extra fixes thanks to mohancm
+TW_INPUT_BLACKLIST := "hbtp_vm"
+TARGET_RECOVERY_PIXEL_FORMAT := "RGBX_8888"
+RECOVERY_GRAPHICS_USE_LINELENGTH := true
+TW_SCREEN_BLANK_ON_BOOT := true
+BOARD_SUPPRESS_SECURE_ERASE := true
+endif
 
 # Wi-Fi
 BOARD_HAS_QCOM_WLAN := true

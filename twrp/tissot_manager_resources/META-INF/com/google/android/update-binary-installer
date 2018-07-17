@@ -1,0 +1,7 @@
+#!/sbin/sh
+#
+
+/tissot_manager/installer.sh "$@"
+
+
+

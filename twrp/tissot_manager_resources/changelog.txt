@@ -1,0 +1,90 @@
+<b>2.4</b>
+
+<*>Update to TWRP 3.2.2</*>
+<*>Add flashing and backup/restore of Modem images</*>
+<*>Fix image flashing for file paths with whitespace</*>
+<*>Remove annoying MTP stopping when changing slots (was only useful for dual boot - dual boot developers can do it manually as explained in thread)</*>
+
+
+
+<b>2.3</b>
+
+<*>Fix dual boot issues for non-Treble (hopefully) and SELinux enforcing ROMs (tested stock Oreo and new RR AIO)</*>
+<*>Add SELinux permissive/enforcing option to Patches menu</*>
+<*>Fixed/changed ADBD to true "god-mode" (root and insecure ADBD). For developers/hackers only - very insecure!</*>
+<*>Other minor fixes</*>
+
+
+
+<b>2.2</b>
+
+<*>Support dual boot patch for non-Treble ROM's (tested on stock Oreo)</*>
+<*>Add 'Insecure ADBD on Boot' to Patches menu</*>
+<*>Add Encryption forced/optional toggle to Patches menu</*>
+<*>Add option to skip TWRP survival during payload and boot image flashing (mainly for developers).</*>
+
+
+
+<b>2.1</b>
+
+<*>Fixed payload installer checking/printing the wrong source slot (should be boot slot instead of current slot)</*>
+<*>Removed incompatible kernel screen</*>
+
+
+
+<b>2.0</b>
+
+<*>Implement dualboot system (see XDA thread for details)</*>
+<*>Add TWRP survival for flashing payload ZIP's (AIO's) and boot.img (see XDA thread for details)</*>
+<*>Added some text output and GUI prompts to assist users with dualboot and slot-related actions</*>
+<*>Various other small usability improvements and fixes</*>
+
+
+
+<b>1.5</b>
+
+<*>Return original TWRP theme (more familiar interface, multilanguage and slightly faster)</*>
+<*>Fix device lock from new encryption service breaking repartition</*>
+<*>Maintain 16KB footer for userdata encryption when shrinking (requires repartition back to stock then shrink userdata again)</*>
+<*>Update mkfs.f2fs binary to 1.2.0 (supports length argument). F2FS is unsupported and untested.</*>
+
+
+
+<b>1.4</b>
+
+<*>Fixed decrypting storage</*>
+
+
+
+<b>1.3</b>
+
+<*>Renamed to Tissot Manager</*>
+<*>Fixed USB-OTG</*>
+<*>Fixed slot change bug</*>
+<*>Added some helpful post-install text regarding slots and TWRP installation</*>
+<*>Version bump for new source-built TWRP</*>
+
+
+
+<b>1.2</b>
+
+<*>Support flashing img files to vendor and system (e.g. GSI's)</*>
+
+
+
+<b>1.1</b>
+
+<*>Treble Manager will now copy any saved log file to the microSD root</*>
+<*>Treble Manager will now reboot recovery when changing partitions to ensure new partition changes are loaded by Recovery</*>
+
+
+
+<b>1.0</b>
+
+<*>Initial version</*>
+<*>Aroma-based 'Treble Manager' button added to TWRP Main Menu > Advanced</*>
+<*>Has choice to shrink userdata or system to create new vendor partition</*>
+<*>Can restore stock partition map from either Treble state.</*>
+
+
+
